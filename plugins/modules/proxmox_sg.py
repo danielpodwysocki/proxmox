@@ -10,32 +10,43 @@ DOCUMENTATION = r'''
 ---
 module: proxmox_sg
 
-short_description: This is a module to create security groups to be used with the proxmox firewall
+short_description: This is a module to create security groups and firewall rules within the Proxmox Virtual Environment
 
 # If this is part of a collection, you need to use semantic versioning,
 # i.e. the version is of the form "2.5.0" and not "2.4".
 version_added: "1.0.0"
 
-description: Placeholder.
+description: This module requires that you install the proxmoxer python module on the host you run it from.
 
 options:
     name:
-        description: This is the message to send to the test module.
+        description: This is the name of the security group you'll be creating.
         required: true
         type: str
-    new:
-        description:
-            - Control to demo if the result of this module is changed or not.
-            - Parameter description can be a list as well.
+    api_host:
+        description: This is the proxmox node with the exposed API
+        required: true
+        type: str
+    api_user:
+        description: User that will be accessing the API, for example `root@pam` (@ specifies the auth backend)
+        required: true
+        type: str
+    api_password:
+        description: Password for the api user
+        required: true
+        type: str
+    verify_ssl:
+        description: A boolean that determines whether or not the ssl check should be skipped 
         required: false
         type: bool
+        default: true
 # Specify this value according to your collection
 # in format of namespace.collection.doc_fragment_name
 extends_documentation_fragment:
-    - my_namespace.my_collection.my_doc_fragment_name
+    - danielpodwysocki.proxmox.general
 
 author:
-    - Your Name (@yourGitHubHandle)
+    - Daniel Podwysocki (@danielpodwysocki)
 '''
 
 EXAMPLES = r'''
@@ -80,7 +91,8 @@ def run_module():
         api_password=dict(type='str', required=True, no_log=True),
         api_user=dict(type='str', required=True),
         api_host=dict(type='str', required=True),
-        verify_ssl=dict(type='bool', required=False, default=True)
+        verify_ssl=dict(type='bool', required=False, default=True),
+        rules=dict(type='list', required=False, elements='dict')
 
     )
 
@@ -126,13 +138,16 @@ def run_module():
         if sg['group'] == module.params['name']:
            sg_exists = True
 
-
-    #the result defaults to False, if we're creating a group, make it True and then create the group
+    #the result['changed'] defaults to False, if we're creating a group, make it True and then create the group
     if not sg_exists:
         result['changed'] = True
         proxmox.cluster.firewall.groups.create(group=module.params['name'])
-
-
+        for rule in module.params['rules']:
+            proxmox.cluster.firewall.groups(module.params['name']).create(action=rule['action'],type=rule['type'] ,group=module.params['name'])
+            
+    # else:
+    #     rules = proxmox.cluster.firewall.rules.get()
+    
 
     # in the event of a successful module execution, you will want to
     # simple AnsibleModule.exit_json(), passing the key/value results
