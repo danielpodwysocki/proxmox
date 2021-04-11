@@ -8,7 +8,7 @@ import requests
 
 DOCUMENTATION = r'''
 ---
-module: proxmox-sg
+module: proxmox_sg
 
 short_description: This is a module to create security groups to be used with the proxmox firewall
 
