@@ -83,6 +83,15 @@ message:
 
 from ansible.module_utils.basic import AnsibleModule
 
+def rule_is_valid(rule):
+    '''
+    returns True if the rule posseses the necessary fields
+    '''
+    if 'action' not in rule or 'type' not in rule:
+        return False
+    else:
+        return True
+
 def run_module():
     # define available arguments/parameters a user can pass to the module
     module_args = dict(
@@ -137,6 +146,10 @@ def run_module():
     for sg in security_groups:
         if sg['group'] == module.params['name']:
            sg_exists = True
+    #check if all the rules are valid, if not, fail the execution
+    for rule in module.params['rules']:
+        if not rule_is_valid(rule):
+            module.fail_json(msg='The firewall rules were not correct', **result)
 
     #the result['changed'] defaults to False, if we're creating a group, make it True and then create the group
     if not sg_exists:
