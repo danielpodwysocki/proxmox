@@ -89,8 +89,18 @@ def rule_is_valid(rule):
     '''
     if 'action' not in rule or 'type' not in rule:
         return False
-    else:
-        return True
+    # if rule['action'] not in ['ACCEPT','REJECT','DROP']:
+    #     return False
+    return True
+
+def pad_rules(rules):
+    rules_padded = rules
+    for i, rule in enumerate(rules_padded):
+        print(i)
+        print(rule)
+        
+    return rules_padded
+
 
 def run_module():
     # define available arguments/parameters a user can pass to the module
@@ -145,7 +155,10 @@ def run_module():
     sg_exists=False
     for sg in security_groups:
         if sg['group'] == module.params['name']:
-           sg_exists = True
+            sg_exists = True
+            #todo: check if the rules are identical
+
+    print(pad_rules(module.params['rules'])) # debug print
     #check if all the rules are valid, if not, fail the execution
     for rule in module.params['rules']:
         if not rule_is_valid(rule):
