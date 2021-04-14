@@ -94,11 +94,11 @@ def rule_is_valid(rule):
     return True
 
 def pad_rules(rules):
-    rules_padded = rules
-    for i, rule in enumerate(rules_padded):
-        print(i)
-        print(rule)
-        
+    rules_padded = []
+    for i, rule in enumerate(rules):
+        rule['pos'] = i
+        rules_padded.append(rule)
+
     return rules_padded
 
 
