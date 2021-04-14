@@ -153,8 +153,14 @@ def run_module():
             sg_exists = True
         else:
             result['changed'] = True
-
+        if 'rules' in module.params:
+            #check if all the rules are valid, if not, fail the execution
+            for rule in module.params['rules']:
+                if not rule_is_valid(rule):
+                    module.fail_json(msg='The firewall rules were not correct', **result)
             #todo: check if the rules are identical
+ 
+
 
     if not sg_exists:
         result['changed'] = True
@@ -166,12 +172,8 @@ def run_module():
         
 
     print(pad_rules(module.params['rules'])) # debug print
-    #check if all the rules are valid, if not, fail the execution
-    for rule in module.params['rules']:
-        if not rule_is_valid(rule):
-            module.fail_json(msg='The firewall rules were not correct', **result)
-
-    #the result['changed'] defaults to False, if we're creating a group, make it True and then create the group
+  
+    #if the security group doesn't already exist, create it. Then create all the corresponding rules
     if not sg_exists:
         proxmox.cluster.firewall.groups.create(group=module.params['name'])
         for rule in module.params['rules']:
