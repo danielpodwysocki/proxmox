@@ -2,7 +2,6 @@
 
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
-import proxmoxer
 from proxmoxer import ProxmoxAPI
 import requests
 
@@ -101,6 +100,20 @@ def pad_rules(rules):
 
     return rules_padded
 
+def rulesets_identical(rules_existing,rules_defined):
+    '''
+        Returns True if the rulesets passed are identical. 
+        Takes arrays of rules as args, rules_exisitng and rules_identical
+        We assume the roles are sorted with the first item having a pos 0
+    '''
+    if len(rules_existing) != len(rules_defined):
+        return False
+    for rule_defined, rule_exsisting in zip(rules_defined, rules_existing):
+        for key, value in rule_defined.items():
+            if rule_exsisting[key] != value:
+                return False
+    
+    return True
 
 def run_module():
     # define available arguments/parameters a user can pass to the module
