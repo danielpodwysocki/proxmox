@@ -135,11 +135,6 @@ def run_module():
         supports_check_mode=False
     )
 
-    # if the user is working with this module in only check mode we do not
-    # want to make any changes to the environment, just return the current
-    # state with no modifications
-    if module.check_mode:
-        module.exit_json(**result)
 
     # manipulate or modify the state as needed (this is going to be the
     # part where your module will do what it needs to do)
@@ -156,7 +151,19 @@ def run_module():
     for sg in security_groups:
         if sg['group'] == module.params['name']:
             sg_exists = True
+        else:
+            result['changed'] = True
+
             #todo: check if the rules are identical
+
+    if not sg_exists:
+        result['changed'] = True
+
+
+    #Return the status of changes if we're in check mode
+    if module.check_mode:
+        module.exit_json(**result)
+        
 
     print(pad_rules(module.params['rules'])) # debug print
     #check if all the rules are valid, if not, fail the execution
@@ -166,7 +173,6 @@ def run_module():
 
     #the result['changed'] defaults to False, if we're creating a group, make it True and then create the group
     if not sg_exists:
-        result['changed'] = True
         proxmox.cluster.firewall.groups.create(group=module.params['name'])
         for rule in module.params['rules']:
             proxmox.cluster.firewall.groups(module.params['name']).create(action=rule['action'],type=rule['type'] ,group=module.params['name'])
