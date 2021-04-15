@@ -1,6 +1,6 @@
 #!/usr/bin/python
-
 from __future__ import (absolute_import, division, print_function)
+from ansible.module_utils.basic import AnsibleModule
 __metaclass__ = type
 from proxmoxer import ProxmoxAPI
 import requests
@@ -80,7 +80,6 @@ message:
     sample: 'goodbye'
 '''
 
-from ansible.module_utils.basic import AnsibleModule
 
 def rule_is_valid(rule):
     '''
@@ -92,13 +91,25 @@ def rule_is_valid(rule):
     #     return False
     return True
 
+
 def pad_rules(rules):
     rules_padded = []
     for i, rule in enumerate(rules):
         rule['pos'] = i
-        rules_padded.append(rule)
+        if 'enable' not in rule:
+            rule['enable'] = 0
+        rules_padded.append(rule) 
+
 
     return rules_padded
+
+
+def clean_rules(rules):
+    '''
+    Takes in an array of rules (defined as dicts) and removes the digest key/val pair from every rule in it
+    '''
+    for rule in rules:
+        rule.pop('digest')
 
 def rulesets_identical(rules_existing,rules_defined):
     '''
@@ -108,11 +119,10 @@ def rulesets_identical(rules_existing,rules_defined):
     '''
     if len(rules_existing) != len(rules_defined):
         return False
-    for rule_defined, rule_exsisting in zip(rules_defined, rules_existing):
-        for key, value in rule_defined.items():
-            if rule_exsisting[key] != value:
-                return False
-    
+    for rule_defined, rule_existing in zip(rules_defined, rules_existing):
+        #we check if both dicts contain the key/val pairs
+        if rule_defined != rule_existing:
+            return false
     return True
 
 def run_module():
@@ -158,33 +168,40 @@ def run_module():
     proxmox = ProxmoxAPI(module.params['api_host'], user=module.params['api_user'],
                      password=module.params['api_password'], verify_ssl=module.params['verify_ssl'])
     security_groups = proxmox.cluster.firewall.groups.get()    
-    
+    rules_existing = []
+
+
+    rules_existing = []
     #check if the sg exists, if it does set sg_exists to True
     sg_exists=False
     for sg in security_groups:
         if sg['group'] == module.params['name']:
             sg_exists = True
+            rules_existing = proxmox.cluster.firewall.groups(module.params['name']).get()
         else:
             result['changed'] = True
-        if 'rules' in module.params:
-            #check if all the rules are valid, if not, fail the execution
-            for rule in module.params['rules']:
-                if not rule_is_valid(rule):
-                    module.fail_json(msg='The firewall rules were not correct', **result)
-            #todo: check if the rules are identical
- 
-
-
+        
     if not sg_exists:
         result['changed'] = True
+    
+    #clean the rules from the digest
+    clean_rules(rules_existing)
+    if 'rules' in module.params:
+    #check if all the rules passed to the module are valid, if not, fail the execution
+        for rule in module.params['rules']:
+            if not rule_is_valid(rule):
+                module.fail_json(msg='The firewall rules were not correct', **result)
+        #check if the rulesets are identical
+        if not rulesets_identical(rules_existing, pad_rules(module.params['rules'])):
+            result['changed'] = True
 
-
+    
     #Return the status of changes if we're in check mode
     if module.check_mode:
         module.exit_json(**result)
         
 
-    print(pad_rules(module.params['rules'])) # debug print
+    # print(pad_rules(module.params['rules'])) # debug 
   
     #if the security group doesn't already exist, create it. Then create all the corresponding rules
     if not sg_exists:
