@@ -142,22 +142,6 @@ def rulesets_diff(rules_existing, rules_defined):
     return ret
 
 
-
-
-def rulesets_identical(rules_existing,rules_defined):
-    '''
-        Returns True if the rulesets passed are identical. 
-        Takes arrays of rules as args, rules_exisitng and rules_identical
-        We assume the roles are sorted with the first item having a pos 0
-    '''
-    if len(rules_existing) != len(rules_defined):
-        return False
-    for rule_defined, rule_existing in zip(rules_defined, rules_existing):
-        #we check if both dicts contain the key/val pairs
-        if rule_defined != rule_existing:
-            return False
-    return True
-
 def run_module():
     # define available arguments/parameters a user can pass to the module
     module_args = dict(
@@ -188,7 +172,7 @@ def run_module():
     # supports check mode
     module = AnsibleModule(
         argument_spec=module_args,
-        supports_check_mode=False
+        supports_check_mode=True
     )
 
 
@@ -226,7 +210,7 @@ def run_module():
                 module.fail_json(msg='The firewall rules were not correct', **result)
         
         #check if the rulesets are identical
-        if not rulesets_identical(rules_existing, pad_rules(module.params['rules'])):
+        if rulesets_diff(rules_existing, pad_rules(module.params['rules'])):
             result['changed'] = True
             rules_changed = True
     print(rulesets_diff(rules_existing, pad_rules(module.params['rules'])))
