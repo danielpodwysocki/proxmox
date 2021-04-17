@@ -1,7 +1,8 @@
 namespace: danielpodwysocki
 name: proxmox
-version: 1.0.0
+version: 1.0.2
 readme: README.md
 authors: "Daniel Podwysocki"
 repository: https://github.com/danielpodwysocki/proxmox
-license: GPL-3.0  
+license: 
+  - GPL-3.0-only

@@ -40,13 +40,8 @@ options:
         type: bool
         default: true
     rules:
-        description: A list of rules, which themselves are dictionaries (see example). Rule's attributes follow the ones outlined in the proxmox api: https://pve.proxmox.com/pve-docs/api-viewer/\#/cluster/firewall/groups/{group}
+        description: A list of rules, which themselves are dictionaries (see example). Rule's attributes follow the ones outlined in the proxmox api ('https://pve.proxmox.com/pve-docs/api-viewer/\#/cluster/firewall/groups/{group}')
     
-# Specify this value according to your collection
-# in format of namespace.collection.doc_fragment_name
-extends_documentation_fragment:
-    - danielpodwysocki.proxmox.general
-
 author:
     - Daniel Podwysocki (@danielpodwysocki)
 '''
