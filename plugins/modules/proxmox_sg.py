@@ -190,7 +190,7 @@ def run_module():
 
     #check if the sg exists, if it does set sg_exists to True
     sg_exists = False
-    rules_changed = False
+    rules_changed = []
     for sg in security_groups:
         if sg['group'] == module.params['name']:
             sg_exists = True
@@ -210,10 +210,9 @@ def run_module():
                 module.fail_json(msg='The firewall rules were not correct', **result)
         
         #check if the rulesets are identical
-        if rulesets_diff(rules_existing, pad_rules(module.params['rules'])):
+        rules_changed = rulesets_diff(rules_existing, pad_rules(module.params['rules'])):
+        if rules_changed:
             result['changed'] = True
-            rules_changed = True
-    print(rulesets_diff(rules_existing, pad_rules(module.params['rules'])))
     
     #Return the status of changes if we're in check mode
     if module.check_mode:
@@ -228,6 +227,7 @@ def run_module():
             
     elif rules_changed:
         print('reconcile the rules changes')
+        
     else:
         print('ok')
         
