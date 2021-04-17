@@ -3,3 +3,5 @@ name: proxmox
 version: 1.0.0
 readme: README.md
 authors: "Daniel Podwysocki"
+repository: https://github.com/danielpodwysocki/proxmox
+  
