@@ -77,7 +77,7 @@ message:
     description: The output message that the test module generates.
     type: str
     returned: always
-    sample: 'goodbye'
+    sample: 'goodbye'ru
 '''
 
 
@@ -111,6 +111,39 @@ def clean_rules(rules):
     for rule in rules:
         rule.pop('digest')
 
+def rulesets_diff(rules_existing, rules_defined):
+    '''
+    returns an arr with positions of rules that aren't identical to each other
+    '''
+    ret = []
+    print(rules_existing)
+    print(rules_defined)
+    if len(rules_existing) == len(rules_defined):
+        #we check if both dicts contain the key/val pairs, if not we add the pos of the rule to the list
+        for rule_defined, rule_existing in zip(rules_defined, rules_existing):
+            if rule_defined != rule_existing:
+                ret.append(rule_defined['pos'])
+    elif len(rules_existing) < len(rules_defined):
+        for rule_defined, rule_existing in zip(rules_defined[:len(rules_existing)], rules_existing):
+            if rule_defined != rule_existing:
+                ret.append(rule_defined['pos'])
+
+        for x in range(len(rules_existing), len(rules_defined)):
+            ret.append(x)
+    else:
+        for rule_defined, rule_existing in zip(rules_defined, rules_existing[:len(rules_defined)]):
+            if rule_defined != rule_existing:
+                ret.append(rule_defined['pos'])
+
+        for x in range(len(rules_defined), len(rules_existing)):
+            ret.append(x)
+
+
+    return ret
+
+
+
+
 def rulesets_identical(rules_existing,rules_defined):
     '''
         Returns True if the rulesets passed are identical. 
@@ -122,7 +155,7 @@ def rulesets_identical(rules_existing,rules_defined):
     for rule_defined, rule_existing in zip(rules_defined, rules_existing):
         #we check if both dicts contain the key/val pairs
         if rule_defined != rule_existing:
-            return false
+            return False
     return True
 
 def run_module():
@@ -171,9 +204,9 @@ def run_module():
     rules_existing = []
 
 
-    rules_existing = []
     #check if the sg exists, if it does set sg_exists to True
-    sg_exists=False
+    sg_exists = False
+    rules_changed = False
     for sg in security_groups:
         if sg['group'] == module.params['name']:
             sg_exists = True
@@ -187,21 +220,21 @@ def run_module():
     #clean the rules from the digest
     clean_rules(rules_existing)
     if 'rules' in module.params:
-    #check if all the rules passed to the module are valid, if not, fail the execution
+        #check if all the rules passed to the module are valid, if not, fail the execution
         for rule in module.params['rules']:
             if not rule_is_valid(rule):
                 module.fail_json(msg='The firewall rules were not correct', **result)
+        
         #check if the rulesets are identical
         if not rulesets_identical(rules_existing, pad_rules(module.params['rules'])):
             result['changed'] = True
-
+            rules_changed = True
+    print(rulesets_diff(rules_existing, pad_rules(module.params['rules'])))
     
     #Return the status of changes if we're in check mode
     if module.check_mode:
         module.exit_json(**result)
         
-
-    # print(pad_rules(module.params['rules'])) # debug 
   
     #if the security group doesn't already exist, create it. Then create all the corresponding rules
     if not sg_exists:
@@ -209,9 +242,11 @@ def run_module():
         for rule in module.params['rules']:
             proxmox.cluster.firewall.groups(module.params['name']).create(action=rule['action'],type=rule['type'] ,group=module.params['name'])
             
-    # else:
-    #     rules = proxmox.cluster.firewall.rules.get()
-    
+    elif rules_changed:
+        print('reconcile the rules changes')
+    else:
+        print('ok')
+        
 
     # in the event of a successful module execution, you will want to
     # simple AnsibleModule.exit_json(), passing the key/value results
