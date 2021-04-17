@@ -39,6 +39,9 @@ options:
         required: false
         type: bool
         default: true
+    rules:
+        description: A list of rules, which themselves are dictionaries (see example). Rule's attributes follow the ones outlined in the proxmox api: https://pve.proxmox.com/pve-docs/api-viewer/\#/cluster/firewall/groups/{group}
+    
 # Specify this value according to your collection
 # in format of namespace.collection.doc_fragment_name
 extends_documentation_fragment:
@@ -49,36 +52,30 @@ author:
 '''
 
 EXAMPLES = r'''
-# Pass in a message
-- name: Test with a message
-  my_namespace.my_collection.my_test:
-    name: hello world
+- name: Create a security group without any rules
+  danielpodwysocki.proxmox.proxmox_sg:
+    name: empty_sg
+    api_user: {{ api_user }}
+    api_password: {{ api_password }}
+    api_host: {{ api_host }}
+    verify_ssl: False
+    
 
-# pass in a message and have changed true
-- name: Test with a message and changed output
-  my_namespace.my_collection.my_test:
-    name: hello world
-    new: true
-
-# fail the module
-- name: Test failure of the module
-  my_namespace.my_collection.my_test:
-    name: fail me
+- name: Create a security group with a rule allowing SSH access
+  danielpodwysocki.proxmox.proxmox_sg:
+    name: empty_sg
+    api_user: {{ api_user }}
+    api_password: {{ api_password }}
+    api_host: {{ api_host }}
+    verify_ssl: False
+    rules:
+      - enable: 1
+      - type: IN
+      - action: ACCEPT
+      - dport: 22
+    
 '''
 
-RETURN = r'''
-# These are examples of possible return values, and in general should use other names for return values.
-original_message:
-    description: The original name param that was passed in.
-    type: str
-    returned: always
-    sample: 'hello world'
-message:
-    description: The output message that the test module generates.
-    type: str
-    returned: always
-    sample: 'goodbye'ru
-'''
 
 
 def rule_is_valid(rule):
@@ -87,8 +84,6 @@ def rule_is_valid(rule):
     '''
     if 'action' not in rule or 'type' not in rule:
         return False
-    # if rule['action'] not in ['ACCEPT','REJECT','DROP']:
-    #     return False
     return True
 
 
@@ -153,31 +148,15 @@ def run_module():
 
     )
 
-    # seed the result dict in the object
-    # we primarily care about changed and state
-    # changed is if this module effectively modified the target
-    # state will include any data that you want your module to pass back
-    # for consumption, for example, in a subsequent task
     result = dict(
-        changed=False,
-        original_message='',
-        message=''
+        changed=False
     )
 
-    # the AnsibleModule object will be our abstraction working with Ansible
-    # this includes instantiation, a couple of common attr would be the
-    # args/params passed to the execution, as well as if the module
-    # supports check mode
     module = AnsibleModule(
         argument_spec=module_args,
         supports_check_mode=True
     )
 
-
-    # manipulate or modify the state as needed (this is going to be the
-    # part where your module will do what it needs to do)
-    result['original_message'] = module.params['name']
-    result['message'] = 'goodbye'
 
     #determine if the group already exists
     proxmox = ProxmoxAPI(module.params['api_host'], user=module.params['api_user'],
@@ -194,8 +173,6 @@ def run_module():
         if sg['group'] == module.params['name']:
             sg_exists = True
             rules_existing = proxmox.cluster.firewall.groups(module.params['name']).get()
-        else:
-            result['changed'] = True
         
     if not sg_exists:
         result['changed'] = True
@@ -238,11 +215,7 @@ def run_module():
                 proxmox.cluster.firewall.groups(module.params['name'])(str(rule)).set(**rules_defined[rule])
 
 
-        
-
-    # in the event of a successful module execution, you will want to
-    # simple AnsibleModule.exit_json(), passing the key/value results
-    module.exit_json(**result)
+            module.exit_json(**result)
 
 
 def main():
