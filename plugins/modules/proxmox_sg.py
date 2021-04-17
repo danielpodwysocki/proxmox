@@ -116,8 +116,6 @@ def rulesets_diff(rules_existing, rules_defined):
     returns an arr with positions of rules that aren't identical to each other
     '''
     ret = []
-    print(rules_existing)
-    print(rules_defined)
     if len(rules_existing) == len(rules_defined):
         #we check if both dicts contain the key/val pairs, if not we add the pos of the rule to the list
         for rule_defined, rule_existing in zip(rules_defined, rules_existing):
@@ -190,6 +188,7 @@ def run_module():
 
     #check if the sg exists, if it does set sg_exists to True
     sg_exists = False
+    rules_defined = []
     rules_changed = []
     for sg in security_groups:
         if sg['group'] == module.params['name']:
@@ -204,13 +203,14 @@ def run_module():
     #clean the rules from the digest
     clean_rules(rules_existing)
     if 'rules' in module.params:
+        rules_defined = pad_rules(module.params['rules'])
         #check if all the rules passed to the module are valid, if not, fail the execution
         for rule in module.params['rules']:
             if not rule_is_valid(rule):
                 module.fail_json(msg='The firewall rules were not correct', **result)
         
         #check if the rulesets are identical
-        rules_changed = rulesets_diff(rules_existing, pad_rules(module.params['rules'])):
+        rules_changed = rulesets_diff(rules_existing, rules_defined)
         if rules_changed:
             result['changed'] = True
     
@@ -222,14 +222,22 @@ def run_module():
     #if the security group doesn't already exist, create it. Then create all the corresponding rules
     if not sg_exists:
         proxmox.cluster.firewall.groups.create(group=module.params['name'])
-        for rule in module.params['rules']:
-            proxmox.cluster.firewall.groups(module.params['name']).create(action=rule['action'],type=rule['type'] ,group=module.params['name'])
+        for rule in rules_defined:
+            proxmox.cluster.firewall.groups(module.params['name']).create(**rule)
             
     elif rules_changed:
-        print('reconcile the rules changes')
-        
-    else:
-        print('ok')
+        for rule in rules_changed:
+            #if a rule on that position no longer exists, delete it.
+            if rule > len(rules_defined) - 1:
+                proxmox.cluster.firewall.groups(module.params['name'])(rule).delete()
+            #if a rule on that position doesn't exist, but it should, create it
+            elif rule > len(rules_existing) -1:
+                proxmox.cluster.firewall.groups(module.params['name']).create(**rules_defined[rule])
+            #if a rule exists on that position, but is different, modify it
+            else:
+                proxmox.cluster.firewall.groups(module.params['name'])(str(rule)).set(**rules_defined[rule])
+
+
         
 
     # in the event of a successful module execution, you will want to
