@@ -53,24 +53,22 @@ EXAMPLES = r'''
     api_user: {{ api_user }}
     api_password: {{ api_password }}
     api_host: {{ api_host }}
-    verify_ssl: False
-    
+    verify_ssl: False    
 
 - name: Create a security group with a rule allowing SSH access
   danielpodwysocki.proxmox.proxmox_sg:
-    name: empty_sg
+    name: ssh_sg
     api_user: {{ api_user }}
     api_password: {{ api_password }}
     api_host: {{ api_host }}
     verify_ssl: False
     rules:
       - enable: 1
-      - type: IN
-      - action: ACCEPT
-      - dport: 22
-    
-'''
+        type: IN
+        action: ACCEPT
+        dport: 22
 
+'''
 
 
 def rule_is_valid(rule):
@@ -90,7 +88,6 @@ def pad_rules(rules):
             rule['enable'] = 0
         rules_padded.append(rule) 
 
-
     return rules_padded
 
 
@@ -101,13 +98,14 @@ def clean_rules(rules):
     for rule in rules:
         rule.pop('digest')
 
+
 def rulesets_diff(rules_existing, rules_defined):
     '''
     returns an arr with positions of rules that aren't identical to each other
     '''
     ret = []
     if len(rules_existing) == len(rules_defined):
-        #we check if both dicts contain the key/val pairs, if not we add the pos of the rule to the list
+#we check if both dicts contain the key/val pairs, if not we add the pos of the rule to the list
         for rule_defined, rule_existing in zip(rules_defined, rules_existing):
             if rule_defined != rule_existing:
                 ret.append(rule_defined['pos'])
@@ -153,14 +151,14 @@ def run_module():
     )
 
 
-    #determine if the group already exists
+#determine if the group already exists
     proxmox = ProxmoxAPI(module.params['api_host'], user=module.params['api_user'],
                      password=module.params['api_password'], verify_ssl=module.params['verify_ssl'])
     security_groups = proxmox.cluster.firewall.groups.get()    
     rules_existing = []
 
 
-    #check if the sg exists, if it does set sg_exists to True
+#check if the sg exists, if it does set sg_exists to True
     sg_exists = False
     rules_defined = []
     rules_changed = []
@@ -168,24 +166,24 @@ def run_module():
         if sg['group'] == module.params['name']:
             sg_exists = True
             rules_existing = proxmox.cluster.firewall.groups(module.params['name']).get()
-        
+
     if not sg_exists:
         result['changed'] = True
-    
-    #clean the rules from the digest
+
+#clean the rules from the digest
     clean_rules(rules_existing)
     if 'rules' in module.params:
         rules_defined = pad_rules(module.params['rules'])
-        #check if all the rules passed to the module are valid, if not, fail the execution
+#check if all the rules passed to the module are valid, if not, fail the execution
         for rule in module.params['rules']:
             if not rule_is_valid(rule):
                 module.fail_json(msg='The firewall rules were not correct', **result)
-        
+
         #check if the rulesets are identical
         rules_changed = rulesets_diff(rules_existing, rules_defined)
         if rules_changed:
             result['changed'] = True
-    
+
     #Return the status of changes if we're in check mode
     if module.check_mode:
         module.exit_json(**result)
@@ -196,7 +194,7 @@ def run_module():
         proxmox.cluster.firewall.groups.create(group=module.params['name'])
         for rule in rules_defined:
             proxmox.cluster.firewall.groups(module.params['name']).create(**rule)
-            
+
     elif rules_changed:
         for rule in rules_changed:
             #if a rule on that position no longer exists, delete it.
