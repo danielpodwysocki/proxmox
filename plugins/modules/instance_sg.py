@@ -42,6 +42,10 @@ EXAMPLES = r'''
     security_group: sg_ssh
     vmids:
       - 101
+    api_user: {{ api_user }}
+    api_password: {{ api_password }}
+    api_host: {{ api_host }}
+
       
 - name: Assign a security group to multiple instances
   danielpodwysocki.proxmox.assign_sg:
@@ -49,6 +53,9 @@ EXAMPLES = r'''
     vmids:
       - 101
       - 102
+    api_user: {{ api_user }}
+    api_password: {{ api_password }}
+    api_host: {{ api_host }}
 
 
 - name: Unassign all security groups from instances contained in the list
@@ -57,16 +64,26 @@ EXAMPLES = r'''
       - 101
       - 102
       - 103
-        
+    api_user: {{ api_user }}
+    api_password: {{ api_password }}
+    api_host: {{ api_host }}
+
 '''
+
+def compare_sgs(sgs_current, sgs_defined):
+    pass
 
 
 def run_module():
     # define available arguments/parameters a user can pass to the module
     module_args = dict(
         security_group=dict(type='str', required=True),
-        nodes=dict(type='list', required=False, elements='dict')
-        instances=dict(type='list', required=False, elements='dict')
+        nodes=dict(type='list', required=False, elements='dict'),
+        instances=dict(type='list', required=False, elements='dict'),
+        api_password=dict(type='str', required=True, no_log=True),
+        api_user=dict(type='str', required=True),
+        api_host=dict(type='str', required=True),
+
     )
 
     result = dict(
@@ -77,10 +94,10 @@ def run_module():
         argument_spec=module_args,
         supports_check_mode=True
     )
-
+    print('xd')
     if module.check_mode:
         module.exit_json(**result)
-        
+    
     module.exit_json(**result)
 
 
