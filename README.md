@@ -1,6 +1,6 @@
 # proxmox
 
-An ansible collection of modules for managing Proxmox.
+A collection of Ansible modules for managing Proxmox.
 
 To install run:
 
