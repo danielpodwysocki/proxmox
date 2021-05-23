@@ -70,6 +70,7 @@ EXAMPLES = r'''
 
 '''
 
+
 def compare_sgs(sgs_current, sgs_defined):
     pass
 
@@ -97,7 +98,7 @@ def run_module():
     print('xd')
     if module.check_mode:
         module.exit_json(**result)
-    
+
     module.exit_json(**result)
 
 
