@@ -34,4 +34,6 @@ python -m ansible.modules.proxmox_sg ~/workspace/args.json
 ```
 The proxmox_sg module is symlinked to the checked out ansible repo (from within which we run the commands).
 
+We create the symlinks inside of lib/ansible/modules in the Ansible checkout. 
+
 More details on that setup can be found in the Ansible docs: https://docs.ansible.com/ansible/latest/dev_guide/developing_modules_general.html
