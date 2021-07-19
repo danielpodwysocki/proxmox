@@ -3,19 +3,22 @@ from __future__ import (absolute_import, division, print_function)
 from ansible.module_utils.basic import AnsibleModule
 __metaclass__ = type
 from proxmoxer import ProxmoxAPI
-import requests
 
 DOCUMENTATION = r'''
 ---
 module: proxmox_sg
 
-short_description: This is a module to create security groups and firewall rules within the Proxmox Virtual Environment
+short_description:>
+    This is a module to create security groups
+    and firewall rules within the Proxmox Virtual Environment
 
 # If this is part of a collection, you need to use semantic versioning,
 # i.e. the version is of the form "2.5.0" and not "2.4".
 version_added: "1.0.0"
 
-description: This module requires that you install the proxmoxer python module on the host you run it from.
+description:>
+    This module requires installing the proxmoxer
+    module on the host you run it from.
 
 options:
     name:
@@ -27,7 +30,9 @@ options:
         required: true
         type: str
     api_user:
-        description: User that will be accessing the API, for example `root@pam` (@ specifies the auth backend)
+        description: >
+            User that will be accessing the API,
+            for example `root@pam` (@ specifies the auth backend)
         required: true
         type: str
     api_password:
@@ -35,13 +40,16 @@ options:
         required: true
         type: str
     verify_ssl:
-        description: A boolean that determines whether or not the ssl check should be skipped 
+        description: A boolean determining if the ssl check should be skipped
         required: false
         type: bool
         default: true
     rules:
-        description: A list of rules, which themselves are dictionaries (see example). Rule's attributes follow the ones outlined in the proxmox api ('https://pve.proxmox.com/pve-docs/api-viewer/\#/cluster/firewall/groups/{group}')
-    
+        description: >
+        A list of rules, which themselves are dictionaries (see example).
+        Rule's attributes follow the ones outlined in the proxmox api
+        ('https://pve.proxmox.com/pve-docs/api-viewer/\#/cluster/firewall/groups/{group}')
+
 author:
     - Daniel Podwysocki (@danielpodwysocki)
 '''
@@ -53,7 +61,7 @@ EXAMPLES = r'''
     api_user: {{ api_user }}
     api_password: {{ api_password }}
     api_host: {{ api_host }}
-    verify_ssl: False    
+    verify_ssl: False
 
 - name: Create a security group with a rule allowing SSH access
   danielpodwysocki.proxmox.proxmox_sg:
@@ -93,7 +101,8 @@ def pad_rules(rules):
 
 def clean_rules(rules):
     '''
-    Takes in an array of rules (defined as dicts) and removes the digest key/val pair from every rule in it
+    Takes in an array of rules (defined as dicts)
+    Removes the digest key/val pair from every rule in it
     '''
     for rule in rules:
         rule.pop('digest')
@@ -105,19 +114,22 @@ def rulesets_diff(rules_existing, rules_defined):
     '''
     ret = []
     if len(rules_existing) == len(rules_defined):
-        # we check if both dicts contain the key/val pairs, if not we add the pos of the rule to the list
+        #  we check if both dicts contain the same key/val pairs,
+        #  if not we add the pos of the rule to the list
         for rule_defined, rule_existing in zip(rules_defined, rules_existing):
             if rule_defined != rule_existing:
                 ret.append(rule_defined['pos'])
     elif len(rules_existing) < len(rules_defined):
-        for rule_defined, rule_existing in zip(rules_defined[:len(rules_existing)], rules_existing):
+        rules_zip = zip(rules_defined[:len(rules_existing)], rules_existing)
+        for rule_defined, rule_existing in rules_zip:
             if rule_defined != rule_existing:
                 ret.append(rule_defined['pos'])
 
         for x in range(len(rules_existing), len(rules_defined)):
             ret.append(x)
     else:
-        for rule_defined, rule_existing in zip(rules_defined, rules_existing[:len(rules_defined)]):
+        rules_zip = zip(rules_defined, rules_existing[:len(rules_defined)])
+        for rule_defined, rule_existing in rules_zip:
             if rule_defined != rule_existing:
                 ret.append(rule_defined['pos'])
 
@@ -151,8 +163,10 @@ def run_module():
 
 
 # determine if the group already exists
-    proxmox = ProxmoxAPI(module.params['api_host'], user=module.params['api_user'],
-                         password=module.params['api_password'], verify_ssl=module.params['verify_ssl'])
+    proxmox = ProxmoxAPI(module.params['api_host'],
+                         user=module.params['api_user'],
+                         password=module.params['api_password'],
+                         verify_ssl=module.params['verify_ssl'])
     security_groups = proxmox.cluster.firewall.groups.get()
     rules_existing = []
 
@@ -174,7 +188,7 @@ def run_module():
     clean_rules(rules_existing)
     if 'rules' in module.params:
         rules_defined = pad_rules(module.params['rules'])
-# check if all the rules passed to the module are valid, if not, fail the execution
+# check if all the rules passed to the module are valid
         for rule in module.params['rules']:
             if not rule_is_valid(rule):
                 module.fail_json(
@@ -189,7 +203,8 @@ def run_module():
     if module.check_mode:
         module.exit_json(**result)
 
-    # if the security group doesn't already exist, create it. Then create all the corresponding rules
+    # if the security group doesn't already exist, create it.
+    #  Then create all the corresponding rules
     if not sg_exists:
         proxmox.cluster.firewall.groups.create(group=module.params['name'])
         for rule in rules_defined:
@@ -202,7 +217,7 @@ def run_module():
             if rule > len(rules_defined) - 1:
                 proxmox.cluster.firewall.groups(
                     module.params['name'])(rule).delete()
-            # if a rule on that position doesn't exist, but it should, create it
+            # if a rule on that pos doesn't exist, but it should, create it
             elif rule > len(rules_existing) - 1:
                 proxmox.cluster.firewall.groups(
                     module.params['name']).create(**rules_defined[rule])
